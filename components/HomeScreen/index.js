@@ -12,89 +12,160 @@ const { width, height } = Dimensions.get( 'window' ); // Get the window dimensio
 
 const Home = ( { navigation } ) => {
 
-    const [ PokeData, SetPokeData ] = useState( [] );
-    const [ Loading, SetLoading ] = useState( true );
-    const [ NextDataURL, SetNextDataURL ] = useState( DEFAULT_API );
-    const [ ModalVisible, SetModalVisible ] = useState( false );
+    const [ RawData, SetRawData ] = useState( [] );
+    const [ DataURL, SetDataURL ] = useState( DEFAULT_API );
+
+    const [ RenderedData, SetRenderedData ] = useState( [ ] );
+    const [ Page, SetPage ] = useState( 1 );
+
     const [ PokemonName, SetPokemonName ] = useState( "" );
     const [ PrevPokemonType, SetPrevPokemonType ] = useState( -1 );
     const [ PokemonType, SetPokemonType ] = useState( -1 );
+    
+    const [ Loading, SetLoading ] = useState( true );
+    const [ ModalVisible, SetModalVisible ] = useState( false );
+
+    // Load the data initially, and when resetting to "Any" type
+    // This loads the Pokemon data as a list
+    useEffect( ( ) => {
+        if ( DataURL == DEFAULT_API && PokemonType == -1 ) loadNextPage( );
+    }, [ DataURL, PokemonType ] );
 
     useEffect( ( ) => {
-        if ( NextDataURL == DEFAULT_API ) loadNextPage( ); // Load the data initially, and when resetting to "Any" type
-    }, [ NextDataURL ] );
+        // When we are trying to search for a pokemon
+        // Reset the raw data
+        SetRawData( [ ] );
+        SetRenderedData( [ ] );
 
-    useEffect( ( ) => {
-        SetPokeData( [] );
-        if ( PokemonName == "" ) SetNextDataURL( DEFAULT_API );
-        else {
+        // If we have cleared the search field, reset the data URL to the default API
+        // This will load the data again, but only if the pokemon type is set to -1
+        if ( PokemonName == "" ) {
+            SetDataURL( DEFAULT_API );
+            if ( PokemonType != -1 ) loadPokemonByType( ); // If we have selected a type, reload the Pokemon by type
+        } else { // If we are searching for a pokemon by name or ID
+
+            const SearchURL = "https://pokeapi.co/api/v2/pokemon/" + PokemonName.toLowerCase();
+            
             SetLoading( true );
-            axios.get( "https://pokeapi.co/api/v2/pokemon/" + PokemonName.toLowerCase() )
-            .then( response => {
-                SetPokeData( [ response.data ] ); // Set the data to the result
+            axios.get( SearchURL ).then( response => {
+                SetRawData( [ response.data ] ); // Set the data to the result
             } ).catch( error => {
-                console.log( error );
+                if ( error.response ) console.log( "Encountered error code: " + error.response.status );
             } ).finally( _ => SetLoading( false ) );
+
         }
     }, [ PokemonName ] );
 
     useEffect( ( ) => {
-        if ( PrevPokemonType == PokemonType ) return; // If the pokemon type hasn't changed
-        SetPrevPokemonType( PokemonType );
+        if ( ModalVisible ) return; // Do NOT update if the modal is still visible
+        if ( PokemonName != "" ) return; // Do NOT update if we are currently searcing, the update will happen
+                                        // when the user cleares the search
+
+        // When we close the modal, check if the pokemon type has changed
+        if ( PrevPokemonType == PokemonType ) return; // If the pokemon type hasn't changed, skip the function
+        SetPrevPokemonType( PokemonType ); // If the type has changed, update the prev type to the current
         
-        SetPokeData( [] ); // Clear the Pokemon data
+        SetRawData( [ ] ); // Clear the Pokemon data
+        SetRenderedData( [ ] ); // Clear the Pokemon data
+        SetPage( 1 ); // Reset the page
+
+        // If we're resetting the type to "Any"
         if ( PokemonType == -1 ) {
-            console.log( "Resetting" );
-            SetNextDataURL( DEFAULT_API ); // Reset the API to default
+            SetDataURL( DEFAULT_API ); // Reset the API to default
             return; // Don't run the rest for "Any" pokemon type
         }
 
-        SetLoading( true );
-        console.log("Type: ", "https://pokeapi.co/api/v2/type/" + PokemonType);
-        axios.get( "https://pokeapi.co/api/v2/type/" + PokemonType )
-        .then( response => {
+        // Load the pokemon by type
+        loadPokemonByType( );
 
-            if ( !response.data.pokemon.length ) { // If there are no pokemon in this category
-                SetLoading( false );
-                return;
+    }, [ ModalVisible, PokemonType ] );
+
+    const loadPokemonByType = ( ) => {
+
+        SetLoading( true );
+
+        const TypeURL = "https://pokeapi.co/api/v2/type/" + PokemonType;
+        
+        axios.get( TypeURL ).then( response => {
+            
+            // If there are no pokemon in this category
+            if ( !response.data.pokemon.length ) return;
+
+            let pokemonList = [ ];
+
+            // For each pokemon of this type
+            for (let i = 0; i < response.data.pokemon.length; i++) {
+                const element = response.data.pokemon[i].pokemon;
+
+                pokemonList.push( {
+                    name: element.name,
+                    url: element.url
+                } );
+
             }
 
-            for (let i = 0; i < response.data.pokemon.length; i++) {
-                const element = response.data.pokemon[i];
-                    
-                axios.get( element.pokemon.url )
-                .then( ( { data: pokemonData } ) => {
-                    SetPokeData( oldData => [ ...oldData, pokemonData ] ); // Append new data to the list
+            SetRawData( pokemonList ); // Append new data to the list
+
+            // Load all the data for the first 5 pokemon
+            pokemonList.slice( 0, 5 ).forEach( p => {
+                // Grabs the details for the pokemon
+                axios.get( p.url ).then( ( { data: pokemonData } ) => {
+                    SetRenderedData( oldData => [ ...oldData, pokemonData ] ); // Append new data to the list
                 } ).catch( error => {
                     console.log( error );
-                } ).finally( ( ) => {
-                    if ( i == ( response.data.pokemon.length - 1 ) ) SetLoading( false );
                 } );
-            }
+            } );
+
 
         } ).catch( error => {
             console.log( error );
+        } ).finally( ( ) => {
+            SetLoading( false );
         } );
 
-    }, [ ModalVisible ] );
+    }
 
     const renderItem = ( { item } ) => (
-        <ListItem onPress={ ( ) => navigation.push( "Pokemon", { pokemon: item } ) } name={ item.name } imageUrl={ item.sprites.front_default } />
+        <ListItem onPress={ ( ) => navigation.push( "Pokemon", { pokemon: item } ) } name={ item.name } imageUrl={ item.sprites ? item.sprites.front_default : "" } />
+        //<ListItem onPress={ ( ) => {} } name={ "Test" } imageUrl={ "" } />
     );
     
     const loadNextPage = ( ) => {
-        if ( PokemonType != -1 ) return; // When filtering by type, no need for infinite scrolling
 
+        if ( PokemonType != -1 ) {
+
+            if ( RawData.length < ( Page * 5 ) ) return; // If we have reached the end of the list, don't continue
+
+            let newData = RawData.slice( Page * 5, Page * 5 + 5 );
+
+            // Load all the data for the new pokemon
+            newData.forEach( p => {
+                // Grabs the details for the pokemon
+                axios.get( p.url ).then( ( { data: pokemonData } ) => {
+                    SetRenderedData( oldData => [ ...oldData, pokemonData ] ); // Append new data to the list
+                } ).catch( error => {
+                    console.log( error );
+                } );
+            } );
+
+            SetPage( prevPage => prevPage + 1 ); // Increase the page count
+            return;
+        }
+
+        if ( PokemonName != "" ) return; // When filtering by type, or searching by name/ID, no need for infinite scrolling
+        
         SetLoading( true );
-        axios.get( NextDataURL )
-        .then( response => {
+
+        // Load the next page of Pokemon
+        axios.get( DataURL ).then( response => {
             
+            // For each pokemon
             for (let i = 0; i < response.data.results.length; i++) {
                 const element = response.data.results[i];
-                    
-                axios.get( element.url )
-                .then( ( { data: pokemonData } ) => {
-                    SetPokeData( oldData => [ ...oldData, pokemonData ] ); // Append new data to the list
+                
+                // Load all the data for each pokemon
+                axios.get( element.url ).then( ( { data: pokemonData } ) => {
+                    SetRawData( oldData => [ ...oldData, pokemonData ] ); // Append new data to the list
                 } ).catch( error => {
                     console.log( error );
                 } ).finally( ( ) => {
@@ -102,7 +173,8 @@ const Home = ( { navigation } ) => {
                 } );
             }
 
-            SetNextDataURL( response.data.next );
+            // Set the data URL to the next page
+            SetDataURL( response.data.next );
         } ).catch( error => {
             console.log( error );
         } );
@@ -115,7 +187,10 @@ const Home = ( { navigation } ) => {
         <Header value={ PokemonName } setValue={ SetPokemonName } onFilterPress={ ( ) => SetModalVisible( true ) } />
         <FlatList
             contentContainerStyle={ styles.container }
-            data={ PokeData }
+            data={ ( ( PrevPokemonType == -1 || PokemonType == -1 ) || PokemonName != "" ) ? RawData : RenderedData } // For "Any" type, the server automatically paginates the results
+                                                                // However, it does not do so when filtering pokemon by type
+                                                                // Hence, we need to do it manually, for performance reasons
+            initialNumToRender={ 5 }
             renderItem={ renderItem }
             keyExtractor={ item => item.name }
             onEndReached={ !Loading && loadNextPage }
@@ -138,7 +213,7 @@ const Home = ( { navigation } ) => {
                             <Picker
                                 style={ styles.picker }
                                 selectedValue={PokemonType}
-                                onValueChange={(itemValue, itemIndex) =>
+                                onValueChange={ ( itemValue, itemIndex ) =>
                                     SetPokemonType(itemValue)
                                 }>
                                 <Picker.Item label="Any" value={-1} />
@@ -211,7 +286,6 @@ const styles = {
         marginVertical: 50
     },
     emptyText: {
-        width: '100%',
         textAlign: 'center',        
         color: '#eb4034',
         fontSize: 24,

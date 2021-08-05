@@ -1,16 +1,16 @@
-Ovo je projekt napravljen koristeći React Native + Expo ( create-react-native-app ).
-Za pokretanje potrebno je instalirati Node.JS, te unutar direktorija pokrenuti komandu "npm install".
-Za pokretanje preko Expo klijenta potreban je i Expo CLI ( npm i -g expo-cli ). Aplikacija se zatim pokreće s "expo start" te ju je moguće isprobati preko fizičkog uređaja ( ili na emulatoru ).
-Sam projekt sastoji se početne stranice na kojoj se nalazi lista pokemona te stranice za detaljan uvid u informacije u pokemonu.
-Moguće je i pretraživati pokemone po imenu i broju, kao i filtrirati pokemone po vrsti.
+This is a project made using React Native + Expo ( create-react-native-app ).
+To run the app you must install Node.JS, and inside the project directory run "npm install".
+To run the app using Expo, Expo CLI is also required ( npm i -g expo-cli ). Running the app is then as simple as running "expo start". You may also run the app on a physical device ( or an emulator ).
+The project consists of a homepage which contains a list of pokemon, and a subsequent page that shows details about the selected pokemon.
+It is also possible to search pokemon by their name or ID. Furthermore, filtering pokemon by type is also possible.
 
-NAPOMENA:
-Zbog vremenskog ograničenja za riješavanje projekta, moram napomenuti da nisam bio u mogućnosti na vrijeme dovršiti i optimizirati kod.
-Primjerice, Poke-API nema nikakve opcije za sortiranje te iz tog razloga sort nije implementiran.
-API također nema pagination prilikom sortiranja po odredenoj vrsti pokemona. Iz ovog razloga, kada se odabere vrsta pokemona, automatski se učita kompletna lista pokemona ( cca. 100 pokemona po vrsti ), kao i poseban request za svakog pokemona u toj listi ( da bi se učitala njegova slika ).
-Ovo je extremely inefficient, i definitivno nije production-ready.
-Proper Error handling is also missing.
+Note:
+Do to the nature of PokeAPI, the app utilizes two ways of rendering data.
+To elaborate:
+When grabbing a list of pokemon, PokeAPI automatically paginates the data, making the client-side code extremely simple.
+On the other hand, grabbing data such as Pokemon which are of a certain type is much different. That data is not paginated, so the actual optimization and pagination is done on the client.
 
-Sve u svemu, aplikacija se može znatno poboljšati, međutim kako sam trenutno između dva putovanja, nisam stigao :)
-Na Vama je da procijenite je li Vam ovo dovoljno, ili biste pričekali još cca. tjedan i pol kada ću napokon imati vremena za pravilan rad :)
-Za bilokakva pitanja slobodno mi se javite, probati ću odgovoriti čim prije.
+There are also some performance improvements to be made, but due to time constraints I have to leave the app as is.
+Plus, since this is a sample project, I don't feel like overengineering the app ;)
+Oh, and another feature left out due to time constraints is the "similar pokemon" feature on the Pokemon screen.
+Let me know if this is enough code for you, or if you'd like me to continue adding these features in a week or two when I can return to a normal work schedule.

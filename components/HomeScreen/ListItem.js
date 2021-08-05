@@ -40,6 +40,7 @@ const styles = {
     textContainer: {
         backgroundColor: "#068CDD",
         borderRadius: 10,
+        marginLeft: 15,
         padding: 10,
         overflow: 'hidden',
         paddingVertical: 5,
@@ -48,12 +49,15 @@ const styles = {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
+        flexShrink: 1
     },
     title: {
-        fontSize: 24,
+        fontSize: 18,
         color: "#ffffff",
         fontWeight: 'bold',
+        textAlign: 'center',
         textTransform: 'capitalize',
+        flexWrap: 'wrap'
     },
     image: {
         width: width / 4,
